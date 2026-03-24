@@ -9,17 +9,17 @@ server:
   web_enabled: true
 
 llama_server:
-  bin: "/home/sri/ai/llm/ik_llama.cpp/build/bin/llama-server"
+  bin: "/path/to/llama-server"
   host: "127.0.0.1"
   port: 0
-  model_path: "/home/sri/ai/llm/models-llama/svara-tts-v1.Q4_K_M.gguf"
-  args: "-c 8192 -ngl 99 -t 4"
+  model_path: "/path/to/model.gguf"
+  args: "-c 4096 -ngl 99 -t 4"
 
 model:
-  max_tokens: 8192
+  max_tokens: 4096
   temperature: 0.7
   top_p: 0.9
-  repetition_penalty: 1.2
+  repetition_penalty: 1.1
 
 audio:
   sample_rate: 24000

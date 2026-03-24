@@ -11,9 +11,12 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 from typing import Optional
 
-from fastapi import FastAPI, HTTPException, Query, Depends, Header, Form
+from fastapi import FastAPI, HTTPException, Query, Depends, Header, Form, Request
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+import logging
+
+logger = logging.getLogger(__name__)
 import yaml
 
 from src.worker import (
@@ -190,6 +193,16 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    if request.url.path in ["/tts/sync", "/tts/stream"]:
+        logger.info(f"Request: {request.method} {request.url.path}")
+        logger.info(f"  Content-Type: {request.headers.get('Content-Type')}")
+        logger.info(f"  Host: {request.headers.get('Host')}")
+    response = await call_next(request)
+    return response
 
 
 WEB_UI_HTML = """
@@ -1037,6 +1050,7 @@ async def generate_speech_sync(
     api_key_verified: bool = Depends(verify_api_key),
 ):
     """Generate speech from text (synchronous)."""
+    logger.info(f"sync request - text length: {len(text)}, voice: {voice}")
     if not text:
         raise HTTPException(status_code=400, detail="Text is required")
 
@@ -1067,6 +1081,7 @@ async def generate_speech_stream(
     api_key_verified: bool = Depends(verify_api_key),
 ):
     """Generate speech and stream audio directly."""
+    logger.info(f"stream request - text length: {len(text)}, voice: {voice}")
     if not text:
         raise HTTPException(status_code=400, detail="Text is required")
 
@@ -1387,15 +1402,20 @@ DOCS_HTML = """
             </div>
             
             <div style="margin-bottom: 12px;">
-                <button class="btn" onclick="addEmotion('<giggle>')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px; margin-bottom: 4px;">&lt;giggle&gt;</button>
-                <button class="btn" onclick="addEmotion('<laugh>')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px; margin-bottom: 4px;">&lt;laugh&gt;</button>
-                <button class="btn" onclick="addEmotion('<chuckle>')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px; margin-bottom: 4px;">&lt;chuckle&gt;</button>
-                <button class="btn" onclick="addEmotion('<sigh>')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px; margin-bottom: 4px;">&lt;sigh&gt;</button>
-                <button class="btn" onclick="addEmotion('<cough>')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px; margin-bottom: 4px;">&lt;cough&gt;</button>
-                <button class="btn" onclick="addEmotion('<sniffle>')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px; margin-bottom: 4px;">&lt;sniffle&gt;</button>
-                <button class="btn" onclick="addEmotion('<groan>')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px; margin-bottom: 4px;">&lt;groan&gt;</button>
-                <button class="btn" onclick="addEmotion('<yawn>')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px; margin-bottom: 4px;">&lt;yawn&gt;</button>
-                <button class="btn" onclick="addEmotion('<gasp>')" style="font-size: 12px; padding: 4px 8px; margin-right: 4px; margin-bottom: 4px;">&lt;gasp&gt;</button>
+                <button class="btn" onclick="addEmotion('<happy>')" style="font-size: 11px; padding: 4px 6px; margin-right: 3px; margin-bottom: 3px;">&lt;happy&gt;</button>
+                <button class="btn" onclick="addEmotion('<sad>')" style="font-size: 11px; padding: 4px 6px; margin-right: 3px; margin-bottom: 3px;">&lt;sad&gt;</button>
+                <button class="btn" onclick="addEmotion('<anger>')" style="font-size: 11px; padding: 4px 6px; margin-right: 3px; margin-bottom: 3px;">&lt;anger&gt;</button>
+                <button class="btn" onclick="addEmotion('<fear>')" style="font-size: 11px; padding: 4px 6px; margin-right: 3px; margin-bottom: 3px;">&lt;fear&gt;</button>
+                <button class="btn" onclick="addEmotion('<excited>')" style="font-size: 11px; padding: 4px 6px; margin-right: 3px; margin-bottom: 3px;">&lt;excited&gt;</button>
+                <button class="btn" onclick="addEmotion('<fearful>')" style="font-size: 11px; padding: 4px 6px; margin-right: 3px; margin-bottom: 3px;">&lt;fearful&gt;</button>
+                <button class="btn" onclick="addEmotion('<surprised>')" style="font-size: 11px; padding: 4px 6px; margin-right: 3px; margin-bottom: 3px;">&lt;surprised&gt;</button>
+                <button class="btn" onclick="addEmotion('<disgusted>')" style="font-size: 11px; padding: 4px 6px; margin-right: 3px; margin-bottom: 3px;">&lt;disgusted&gt;</button>
+                <button class="btn" onclick="addEmotion('<neutral>')" style="font-size: 11px; padding: 4px 6px; margin-right: 3px; margin-bottom: 3px;">&lt;neutral&gt;</button>
+                <button class="btn" onclick="addEmotion('<whisper>')" style="font-size: 11px; padding: 4px 6px; margin-right: 3px; margin-bottom: 3px;">&lt;whisper&gt;</button>
+                <button class="btn" onclick="addEmotion('<giggle>')" style="font-size: 11px; padding: 4px 6px; margin-right: 3px; margin-bottom: 3px;">&lt;giggle&gt;</button>
+                <button class="btn" onclick="addEmotion('<laugh>')" style="font-size: 11px; padding: 4px 6px; margin-right: 3px; margin-bottom: 3px;">&lt;laugh&gt;</button>
+                <button class="btn" onclick="addEmotion('<sigh>')" style="font-size: 11px; padding: 4px 6px; margin-right: 3px; margin-bottom: 3px;">&lt;sigh&gt;</button>
+                <button class="btn" onclick="addEmotion('<cough>')" style="font-size: 11px; padding: 4px 6px; margin-right: 3px; margin-bottom: 3px;">&lt;cough&gt;</button>
             </div>
             
             <textarea id="customText" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false" placeholder="Or type/paste your own text here (supports large text)..." style="width: 100%; min-height: 120px; background: var(--bg-tertiary); border: 1px solid var(--border); color: var(--text); padding: 16px; border-radius: 12px; font-size: 15px; resize: vertical; font-family: inherit;"></textarea>
@@ -1584,7 +1604,8 @@ DOCS_HTML = """
                     // Stream endpoint - returns audio directly
                     const resp = await fetch(endpoint, {
                         method: 'POST',
-                        body: formData
+                        body: formData,
+                        signal: AbortSignal.timeout(120000)
                     });
                     
                     const apiCall = 'curl -s -X POST "<span>http://' + window.location.host + '/tts/stream</span>" -F "text=' + encodeURIComponent(text) + '" -F "voice=' + voice + '" -o speech.wav';
@@ -1609,7 +1630,8 @@ DOCS_HTML = """
                     // Sync endpoint - returns JSON with base64 audio
                     const resp = await fetch(endpoint, {
                         method: 'POST',
-                        body: formData
+                        body: formData,
+                        signal: AbortSignal.timeout(120000)
                     });
                     const data = await resp.json();
                     

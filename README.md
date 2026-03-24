@@ -2,18 +2,24 @@
 
 GGUF-based TTS API with integrated llama-server. 36 Indic language voices.
 
+## Models
+
+Download GGUF models from: https://huggingface.co/mradermacher/svara-tts-v1-GGUF
+
+Original project: https://huggingface.co/kenpath/svara-tts-v1
+
 ## Setup
 
 ```bash
 cd src && pip install -r requirements.txt && cd ..
-# Edit config.yaml with llama-server path and model path
+# Edit config.yaml with llama-server and model paths
 python api_server.py
 ```
 
 ## Features
 
 - 36 voices (18 languages, male/female)
-- Emotion tags: `<giggle>`, `<laugh>`, `<sigh>`, etc.
+- Emotion tags: `<happy>`, `<sad>`, `<anger>`, `<fear>`, `<excited>`, `<fearful>`, `<surprised>`, `<disgusted>`, `<neutral>`, `<whisper>`, `<giggle>`, `<laugh>`, `<sigh>`, etc.
 - Web UI at `http://localhost:8000`
 - Sync/Stream endpoints
 
