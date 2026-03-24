@@ -1,73 +1,40 @@
-# Orpheus-TTS-Local
+# Svara TTS - Indic Text-to-Speech
 
-A lightweight client for running [Orpheus TTS](https://huggingface.co/canopylabs/orpheus-3b-0.1-ft) locally using LM Studio API.
+GGUF-based TTS API with integrated llama-server. 36 Indic language voices.
+
+## Setup
+
+```bash
+cd src && pip install -r requirements.txt && cd ..
+# Edit config.yaml with llama-server path and model path
+python api_server.py
+```
 
 ## Features
 
-- 🎧 High-quality Text-to-Speech using the Orpheus TTS model
-- 💻 Completely local - no cloud API keys needed
-- 🔊 Multiple voice options (tara, leah, jess, leo, dan, mia, zac, zoe)
-- 💾 Save audio to WAV files
+- 36 voices (18 languages, male/female)
+- Emotion tags: `<giggle>`, `<laugh>`, `<sigh>`, etc.
+- Web UI at `http://localhost:8000`
+- Sync/Stream endpoints
 
-## Quick Setup
+## API
 
-1. Install [LM Studio](https://lmstudio.ai/) 
-2. Download the [Orpheus TTS model (orpheus-3b-0.1-ft-q4_k_m.gguf)](https://huggingface.co/isaiahbjork/orpheus-3b-0.1-ft-Q4_K_M-GGUF) in LM Studio
-3. Load the Orpheus model in LM Studio
-4. Start the local server in LM Studio (default: http://127.0.0.1:1234)
-5. Install dependencies:
-   ```
-   python3 -m venv venv
-   source venv/bin/activate
-   pip install -r requirements.txt
-   ```
-6. Run the script:
-   ```
-   python gguf_orpheus.py --text "Hello, this is a test" --voice tara
-   ```
+```bash
+# Sync (returns JSON with base64 audio)
+curl -s -X POST "http://localhost:8000/tts/sync" -F "text=Hello" -F "voice=hi_male" -o response.json
 
-## Usage
+# Stream (returns WAV directly)
+curl -s -X POST "http://localhost:8000/tts/stream" -F "text=Hello" -F "voice=hi_male" -o speech.wav
 
+# List voices
+curl -s http://localhost:8000/voices
+
+# Health
+curl -s http://localhost:8000/health
 ```
-python gguf_orpheus.py --text "Your text here" --voice tara --output "output.wav"
-```
-
-### Options
-
-- `--text`: The text to convert to speech
-- `--voice`: The voice to use (default: tara)
-- `--output`: Output WAV file path (default: auto-generated filename)
-- `--list-voices`: Show available voices
-- `--temperature`: Temperature for generation (default: 0.6)
-- `--top_p`: Top-p sampling parameter (default: 0.9)
-- `--repetition_penalty`: Repetition penalty (default: 1.1)
 
 ## Available Voices
 
-- tara - Best overall voice for general use (default)
-- leah
-- jess
-- leo
-- dan
-- mia
-- zac
-- zoe
+Hindi, Bengali, Marathi, Telugu, Kannada, Bhojpuri, Magahi, Chhattisgarhi, Maithili, Assamese, Bodo, Dogri, Gujarati, Malayalam, Punjabi, Tamil, English (Indian), Nepali, Sanskrit - each with male/female variants.
 
-## Emotion
-You can add emotion to the speech by adding the following tags:
-```xml
-<giggle>
-<laugh>
-<chuckle>
-<sigh>
-<cough>
-<sniffle>
-<groan>
-<yawn>
-<gasp>
-```
-
-## License
-
-Apache 2.0
-
+Default: `hi_male`
