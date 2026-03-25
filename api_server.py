@@ -620,6 +620,110 @@ WEB_UI_HTML = """
             outline: none;
             border-color: var(--accent);
         }
+        
+        /* Tabs */
+        .tabs {
+            display: flex;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+            padding: 0 16px;
+        }
+        
+        .tab-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 12px 20px;
+            cursor: pointer;
+            font-size: 14px;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+        }
+        
+        .tab-btn:hover {
+            color: var(--text-primary);
+        }
+        
+        .tab-btn.active {
+            color: var(--text-primary);
+            border-bottom-color: var(--accent);
+        }
+        
+        .tab-content {
+            flex: 1;
+            overflow-y: auto;
+        }
+        
+        /* Tests */
+        .tests-container {
+            padding: 24px;
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        .tests-container h2 {
+            margin-bottom: 8px;
+        }
+        
+        .tests-container p {
+            color: var(--text-secondary);
+            margin-bottom: 16px;
+        }
+        
+        .run-tests-btn {
+            background: var(--accent);
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+            margin-bottom: 20px;
+        }
+        
+        .run-tests-btn:hover {
+            background: var(--accent-hover);
+        }
+        
+        .run-tests-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .test-results {
+            background: var(--bg-secondary);
+            border-radius: 8px;
+            padding: 16px;
+            font-family: monospace;
+            font-size: 13px;
+            white-space: pre-wrap;
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .test-placeholder {
+            color: var(--text-secondary);
+            font-style: italic;
+        }
+        
+        .test-passed {
+            color: var(--success);
+        }
+        
+        .test-failed {
+            color: var(--error);
+        }
+        
+        .test-audio {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+        }
+        
+        .test-audio audio {
+            width: 100%;
+            margin-top: 8px;
+        }
     </style>
 </head>
 <body>
@@ -728,7 +832,13 @@ WEB_UI_HTML = """
         </div>
     </div>
 
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('chat')">Chat</button>
+        <button class="tab-btn" onclick="switchTab('tests')">Tests</button>
+    </div>
+    
     <div class="main">
+        <div class="tab-content" id="chatTab">
         <div class="chat-container" id="chatContainer">
             <div class="message">
                 <div class="message-avatar">s</div>
@@ -739,6 +849,18 @@ WEB_UI_HTML = """
             <div class="input-wrapper">
                 <textarea class="input-box" id="inputBox" placeholder="Enter text to convert to speech..." rows="1"></textarea>
                 <button class="send-btn" id="sendBtn" onclick="sendMessage()">➤</button>
+            </div>
+        </div>
+        </div>
+        
+        <div class="tab-content" id="testsTab" style="display: none;">
+            <div class="tests-container">
+                <h2>API Tests</h2>
+                <p>Run tests to verify the TTS API is working correctly.</p>
+                <button class="run-tests-btn" onclick="runTests()">Run All Tests</button>
+                <div class="test-results" id="testResults">
+                    <div class="test-placeholder">Click "Run All Tests" to start...</div>
+                </div>
             </div>
         </div>
     </div>
@@ -923,6 +1045,61 @@ WEB_UI_HTML = """
             div.textContent = text;
             return div.innerHTML;
         }
+        
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(content => content.style.display = 'none');
+            
+            if (tab === 'chat') {
+                document.querySelector('.tab-btn:nth-child(1)').classList.add('active');
+                document.getElementById('chatTab').style.display = 'block';
+            } else {
+                document.querySelector('.tab-btn:nth-child(2)').classList.add('active');
+                document.getElementById('testsTab').style.display = 'block';
+            }
+        }
+        
+        async function runTests() {
+            const resultsDiv = document.getElementById('testResults');
+            const btn = document.querySelector('.run-tests-btn');
+            btn.disabled = true;
+            btn.textContent = 'Running tests...';
+            resultsDiv.innerHTML = '<div class="test-placeholder">Running tests...</div>';
+            
+            try {
+                const response = await fetch('/test/run', { method: 'POST' });
+                const data = await response.json();
+                
+                let html = '';
+                if (data.success) {
+                    html += '<div class="test-passed">✓ All tests passed!</div>\n\n';
+                } else {
+                    html += '<div class="test-failed">✗ Some tests failed</div>\n\n';
+                }
+                
+                if (data.output) {
+                    html += data.output + '\n\n';
+                }
+                
+                if (data.story_audio) {
+                    html += '<div class="test-audio">';
+                    html += '<h3>Hindi Story Audio</h3>';
+                    html += '<p>Duration: ' + (data.story_duration || 'N/A') + 's</p>';
+                    const audioBlob = base64ToBlob(data.story_audio, 'audio/wav');
+                    const audioUrl = URL.createObjectURL(audioBlob);
+                    html += '<audio controls src="' + audioUrl + '"></audio>';
+                    html += '<br><a href="' + audioUrl + '" download="test_story.wav">Download</a>';
+                    html += '</div>';
+                }
+                
+                resultsDiv.innerHTML = html;
+            } catch (error) {
+                resultsDiv.innerHTML = '<div class="test-failed">Error: ' + error.message + '</div>';
+            }
+            
+            btn.disabled = false;
+            btn.textContent = 'Run All Tests';
+        }
 
         // Collapse sidebar by default
         document.getElementById('sidebar').classList.add('collapsed');
@@ -1011,32 +1188,90 @@ async def health_check():
 async def list_voices():
     """List all available voices."""
     voices = [
-        {
-            "voice_id": "hi_male",
-            "name": "Hindi (Male)",
-            "languages": ["hi"],
-            "gender": "male",
-        },
-        {
-            "voice_id": "hi_female",
-            "name": "Hindi (Female)",
-            "languages": ["hi"],
-            "gender": "female",
-        },
-        {
-            "voice_id": "bn_male",
-            "name": "Bengali (Male)",
-            "languages": ["bn"],
-            "gender": "male",
-        },
-        {
-            "voice_id": "bn_female",
-            "name": "Bengali (Female)",
-            "languages": ["bn"],
-            "gender": "female",
-        },
+        {"voice_id": "hi_male", "name": "Hindi (Male)", "languages": ["hi"], "gender": "male"},
+        {"voice_id": "hi_female", "name": "Hindi (Female)", "languages": ["hi"], "gender": "female"},
+        {"voice_id": "bn_male", "name": "Bengali (Male)", "languages": ["bn"], "gender": "male"},
+        {"voice_id": "bn_female", "name": "Bengali (Female)", "languages": ["bn"], "gender": "female"},
+        {"voice_id": "mr_male", "name": "Marathi (Male)", "languages": ["mr"], "gender": "male"},
+        {"voice_id": "mr_female", "name": "Marathi (Female)", "languages": ["mr"], "gender": "female"},
+        {"voice_id": "te_male", "name": "Telugu (Male)", "languages": ["te"], "gender": "male"},
+        {"voice_id": "te_female", "name": "Telugu (Female)", "languages": ["te"], "gender": "female"},
+        {"voice_id": "kn_male", "name": "Kannada (Male)", "languages": ["kn"], "gender": "male"},
+        {"voice_id": "kn_female", "name": "Kannada (Female)", "languages": ["kn"], "gender": "female"},
+        {"voice_id": "bh_male", "name": "Bhojpuri (Male)", "languages": ["bh"], "gender": "male"},
+        {"voice_id": "bh_female", "name": "Bhojpuri (Female)", "languages": ["bh"], "gender": "female"},
+        {"voice_id": "mag_male", "name": "Magahi (Male)", "languages": ["mag"], "gender": "male"},
+        {"voice_id": "mag_female", "name": "Magahi (Female)", "languages": ["mag"], "gender": "female"},
+        {"voice_id": "hne_male", "name": "Chhattisgarhi (Male)", "languages": ["hne"], "gender": "male"},
+        {"voice_id": "hne_female", "name": "Chhattisgarhi (Female)", "languages": ["hne"], "gender": "female"},
+        {"voice_id": "mai_male", "name": "Maithili (Male)", "languages": ["mai"], "gender": "male"},
+        {"voice_id": "mai_female", "name": "Maithili (Female)", "languages": ["mai"], "gender": "female"},
+        {"voice_id": "as_male", "name": "Assamese (Male)", "languages": ["as"], "gender": "male"},
+        {"voice_id": "as_female", "name": "Assamese (Female)", "languages": ["as"], "gender": "female"},
+        {"voice_id": "brx_male", "name": "Bodo (Male)", "languages": ["brx"], "gender": "male"},
+        {"voice_id": "brx_female", "name": "Bodo (Female)", "languages": ["brx"], "gender": "female"},
+        {"voice_id": "doi_male", "name": "Dogri (Male)", "languages": ["doi"], "gender": "male"},
+        {"voice_id": "doi_female", "name": "Dogri (Female)", "languages": ["doi"], "gender": "female"},
+        {"voice_id": "gu_male", "name": "Gujarati (Male)", "languages": ["gu"], "gender": "male"},
+        {"voice_id": "gu_female", "name": "Gujarati (Female)", "languages": ["gu"], "gender": "female"},
+        {"voice_id": "ml_male", "name": "Malayalam (Male)", "languages": ["ml"], "gender": "male"},
+        {"voice_id": "ml_female", "name": "Malayalam (Female)", "languages": ["ml"], "gender": "female"},
+        {"voice_id": "pa_male", "name": "Punjabi (Male)", "languages": ["pa"], "gender": "male"},
+        {"voice_id": "pa_female", "name": "Punjabi (Female)", "languages": ["pa"], "gender": "female"},
+        {"voice_id": "ta_male", "name": "Tamil (Male)", "languages": ["ta"], "gender": "male"},
+        {"voice_id": "ta_female", "name": "Tamil (Female)", "languages": ["ta"], "gender": "female"},
+        {"voice_id": "en_male", "name": "English Indian (Male)", "languages": ["en"], "gender": "male"},
+        {"voice_id": "en_female", "name": "English Indian (Female)", "languages": ["en"], "gender": "female"},
+        {"voice_id": "ne_male", "name": "Nepali (Male)", "languages": ["ne"], "gender": "male"},
+        {"voice_id": "ne_female", "name": "Nepali (Female)", "languages": ["ne"], "gender": "female"},
+        {"voice_id": "sa_male", "name": "Sanskrit (Male)", "languages": ["sa"], "gender": "male"},
+        {"voice_id": "sa_female", "name": "Sanskrit (Female)", "languages": ["sa"], "gender": "female"},
     ]
     return {"voices": voices}
+
+
+@app.post("/test/run")
+async def run_tests():
+    """Run API tests and return results."""
+    import subprocess
+    import base64
+    
+    try:
+        result = subprocess.run(
+            ["python3", "test_api.py"],
+            capture_output=True,
+            text=True,
+            timeout=300,
+            cwd=Path(__file__).parent,
+        )
+        
+        output = result.stdout + result.stderr
+        
+        story_audio = None
+        story_duration = None
+        
+        for line in output.split("\n"):
+            if "Saved to:" in line and "test_story" in line:
+                audio_file = line.split("Saved to:")[-1].strip()
+                try:
+                    with open(audio_file, "rb") as f:
+                        story_audio = base64.b64encode(f.read()).decode("utf-8")
+                except:
+                    pass
+            if "Duration:" in line and "s" in line and "test_hindi_story" not in line:
+                try:
+                    story_duration = float(line.split("Duration:")[-1].strip().replace("s", ""))
+                except:
+                    pass
+        
+        return {
+            "success": result.returncode == 0,
+            "output": output[-5000:],
+            "story_audio": story_audio,
+            "story_duration": story_duration,
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
 
 
 @app.post("/tts/sync")
@@ -1102,6 +1337,7 @@ async def generate_speech_stream(
         headers={
             "Content-Disposition": f"attachment; filename=speech_{result.request_id[:8]}.wav",
             "X-Request-ID": result.request_id,
+            "Accept-Ranges": "none",
         },
     )
 

@@ -9,10 +9,10 @@ server:
   web_enabled: true
 
 llama_server:
-  bin: "/path/to/llama-server"
+  bin: "/home/sri/ai/llm/llama.cpp/build/bin/llama-server"
   host: "127.0.0.1"
   port: 0
-  model_path: "/path/to/model.gguf"
+  model_path: "/home/sri/ai/llm/models-llama/svara-tts-v1.Q4_K_M.gguf"
   args: "-c 4096 -ngl 99 -t 4"
 
 model:
